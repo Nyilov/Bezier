@@ -22,7 +22,8 @@ ctx.scale(scale, scale);
 var cursor = {
     x: undefined,
     y: undefined,
-    held: undefined,
+    heldLeft: undefined,
+    heldRight: undefined,
     heldX: undefined,
     heldY: undefined
 }
@@ -34,25 +35,33 @@ window.addEventListener("mousemove", (event) => {
 
 window.addEventListener("mousedown", (event) => {
     if (event.buttons == 1) {
-        cursor.held = true;
+        cursor.heldLeft = true;
+        cursor.heldX = event.x;
+        cursor.heldY = event.y;
+    } else if (event.buttons == 2) {
+        cursor.heldRight = true;
         cursor.heldX = event.x;
         cursor.heldY = event.y;
     }
 })
 
 window.addEventListener("mouseup", (event) => {
-    if (cursor.held == true) {
-        cursor.held = false;
+    if (cursor.heldLeft == true) {
+        cursor.heldLeft = false;
+    } else if ( cursor.heldRight == true) {
+        cursor.heldRight = false;
     }
 })
 
+
 // Just a regular old circle
 class Point {
-    constructor(x, y, radius, colour) {
+    constructor(x, y, radius, colour, style) {
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.colour = colour;
+        this.style = style;
         this.maxRadius = radius + 5;
         this.ogRadius = radius;
         this.dragging = false;
@@ -64,10 +73,18 @@ class Point {
     draw() {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
-        ctx.fillStyle = "white";
-        ctx.fill();
-        ctx.strokeStyle = this.colour;
-        ctx.stroke();
+        if (this.style == "fill") {
+            ctx.fillStyle = this.colour;
+            ctx.fill();
+        } else if (this.style == "stroke") {
+            ctx.strokeStyle = this.colour;
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.strokeStyle = this.colour;
+            ctx.stroke();
+        }
     }
 
     // Tiny animation when cursor hovers over points
@@ -85,7 +102,7 @@ class Point {
     // Hold and drag system
     drag() {
         let cursorDistance = Math.sqrt(Math.pow(cursor.heldX - this.x, 2) + Math.pow(cursor.heldY - this.y, 2));
-        if (cursor.held && cursorDistance < this.radius) {
+        if (cursor.heldLeft && cursorDistance < this.radius) {
             this.dragging = true;
             if (!this.offsetCreated) {
                 this.offsetX = cursor.x - this.x;
@@ -95,13 +112,23 @@ class Point {
         }
 
         if (this.dragging) {
-            if (cursor.held && cursor.x < canvas.width && cursor.y < canvas.height && cursor.y > 0) {
+            if (cursor.heldLeft && cursor.x < canvas.width && cursor.y < canvas.height && cursor.y > 0) {
                 this.x = cursor.x - this.offsetX;
                 this.y = cursor.y - this.offsetY;
             } else {
                 this.dragging = false;
                 this.offsetCreated = false;
             }
+        }
+    }
+
+    //TODO: implement this abomination
+    remove() { 
+        if (cursor.heldRight && cursorDistance < this.radius) {
+            points.splice(this);
+            console.log(points);
+            numOfPoints--;
+            points.sort();
         }
     }
 
@@ -135,20 +162,26 @@ function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.beginPath();
     
-    alphaToBeta.draw();
-    betaToGamma.draw();
+    for (let i = 0; i < numOfPoints - 1; i++) {
+        connectors[i].draw();
+    }
     
-    alpha.update();
-    beta.update();
-    gamma.update();
+    for (let i = 0; i < numOfPoints; i++) {
+        points[i].update();
+    }
 }
 
 // Initialization of objects
-var alpha = new Point(200, 300, 10, "#000000");
-var beta = new Point(300, 200, 10, "#000000");
-var gamma = new Point(300, 400, 10, "#000000");
-var alphaToBeta = new Connector(alpha, beta, "red");
-var betaToGamma = new Connector(beta, gamma, "red");
+var points = [];
+var connectors = [];
+var numOfPoints = 3;
+
+for (let i = 0; i < numOfPoints; i++) {
+    points.push(new Point(Math.random() * innerWidth, Math.random() * innerHeight, 10, "black"));
+}
+for ( let i = 0; i < numOfPoints - 1; i++) {
+    connectors.push(new Connector(points[i], points[i + 1], "red"));
+}
 
 animate();
 
