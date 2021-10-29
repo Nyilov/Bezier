@@ -53,6 +53,12 @@ window.addEventListener("mouseup", (event) => {
     }
 })
 
+window.addEventListener("keypress", (event) => {
+    if (event.key == " ") {
+        
+    }
+})
+
 
 // Just a regular old circle
 class Point {
@@ -197,14 +203,14 @@ function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.beginPath();
     
+    lConnectors[0].draw();
+
     for (let i = 0; i < numOfPoints - 1; i++) {
         pConnectors[i].draw();
         lerpPoints[i].lerp();
         
     }
     
-    lConnectors[0].draw();
-
     for (let i = 0; i < numOfPoints; i++) {
         points[i].update();
     }
@@ -232,7 +238,7 @@ for (let i = 0; i < numOfPoints - 1; i++) {
 }
 
 for (let i = 0; i < numOfPoints - 1; i++) {
-    lConnectors.push(new Connector(lerpPoints[i], lerpPoints[i + 1], "red"));
+    lConnectors.push(new Connector(lerpPoints[i], lerpPoints[i + 1], "blue"));
 }
 
 animate();
