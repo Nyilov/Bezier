@@ -1,4 +1,4 @@
-// TODO: Right-click deleting and linear interpolation
+// TODO: Right-click deleting
 
 const canvas = document.querySelector("canvas");
 const ctx = canvas.getContext("2d");
@@ -142,11 +142,14 @@ class Point {
 // Lines that joins two point objects
 class Connector {
     constructor(p1, p2, colour) {
+        // ctx.beginPath();
+        // ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        // ctx.fillStyle = "brown";
+        // ctx.fill();
         this.p1 = p1;
         this.p2 = p2;
         this.colour = colour;
     }
-
     draw() {
         ctx.beginPath();
         ctx.moveTo(this.p1.x, this.p1.y);
@@ -157,30 +160,79 @@ class Connector {
 
 }
 
+class lerpPoint {
+    constructor(p1, p2) {
+        this.p1 = p1;
+        this.p2 = p2;
+        this.t = 0;
+        this.x = undefined;
+        this.y = undefined;
+    }
+    
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = "brown";
+        ctx.fill();
+    }
+
+    lerp() {
+        let a = this.p1.x;
+        let b = this.p2.x;
+        this.x = a + this.t * (b - a);
+
+        a = this.p1.y;
+        b = this.p2.y;
+        this.y = a + this.t * (b - a);
+
+        if (this.t < 1) {
+            this.t += 0.01
+        }
+        this.draw();
+    }
+}
+
 function animate() {
     requestAnimationFrame(animate);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.beginPath();
     
     for (let i = 0; i < numOfPoints - 1; i++) {
-        connectors[i].draw();
+        pConnectors[i].draw();
+        lerpPoints[i].lerp();
+        
     }
     
+    lConnectors[0].draw();
+
     for (let i = 0; i < numOfPoints; i++) {
         points[i].update();
     }
+
 }
 
 // Initialization of objects
 var points = [];
-var connectors = [];
+var pConnectors = [];
 var numOfPoints = 3;
+var lerpPoints = [];
+var lConnectors = [];
 
-for (let i = 0; i < numOfPoints; i++) {
-    points.push(new Point(Math.random() * innerWidth, Math.random() * innerHeight, 10, "black"));
+points[0] = new Point(200, 400, 10, "Black");
+points[1] = new Point(300, 200, 10, "Black");
+points[2] = new Point(400, 400, 10, "Black");
+
+
+// for (let i = 0; i < numOfPoints; i++) {
+    //     points.push(new Point(Math.random() * innerWidth, Math.random() * innerHeight, 10, "black"));
+    // }
+for (let i = 0; i < numOfPoints - 1; i++) {
+    pConnectors.push(new Connector(points[i], points[i + 1], "red"));
+    lerpPoints.push(new lerpPoint(points[i], points[i + 1]))   
 }
-for ( let i = 0; i < numOfPoints - 1; i++) {
-    connectors.push(new Connector(points[i], points[i + 1], "red"));
+
+for (let i = 0; i < numOfPoints - 1; i++) {
+    lConnectors.push(new Connector(lerpPoints[i], lerpPoints[i + 1], "red"));
 }
 
 animate();
