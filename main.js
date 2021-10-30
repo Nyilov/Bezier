@@ -1,5 +1,3 @@
-// TODO: Right-click deleting
-
 const canvas = document.querySelector("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -143,7 +141,7 @@ class LerpPoint {
         ctx.fill();
     }
     
-    lerp() {
+    update() {
         let a = this.p1.x;
         let b = this.p2.x;
         this.x = a + this.t * (b - a);
@@ -161,10 +159,66 @@ class LerpPoint {
     }
 }
 
-var addPoint = false;
+// This took an unfortunate amount of time to code... my eyes hurt
 var draw = false;
 var playLerp = false;
+function lerp() {
+    if (draw) {
+        lerpConnectors = [];
+        lerpPoints = [];
+        // The amount of distinct levels of which each subset of lerp points are drawn
+        let level = points.length - 1;
+        // The amount of lerp points per level
+        let lerpPerLevel = points.length - 1;
 
+        //Initialization of 2D array
+        for (let i = 0; i < level; i++) {
+            lerpPoints.push([]);
+            lerpConnectors.push([]);
+        }
+
+        for (let i = 0; i < level; i++) {
+            for (let j = 0; j < lerpPerLevel; j++) {
+                if (lerpPerLevel == level) {
+                    lerpPoints[i].push(
+                        new LerpPoint(points[j], points[j + 1]));
+                } else {
+                    lerpPoints[i].push(
+                        new LerpPoint(lerpPoints[i - 1][j], lerpPoints[i - 1][j + 1]));
+                }
+
+                if (lerpPoints[i].length >= 2) {
+                    lerpConnectors[i].push(
+                        new Connector(lerpPoints[i][j - 1], 
+                            lerpPoints[i][j], "blue"))
+                }
+            }
+            // The total amount of lerp points can be calculated as a triangular sum,
+            // which is basically factorial with addition instead of multiplication
+            // This is why each level is one less from the previous one: eg. 4, 3, 2, 1
+            // math voodoo magic?
+            lerpPerLevel--;
+        }
+        playLerp = true;
+        draw = false;
+    }
+
+    if (playLerp) {
+        for (let i = 0; i < lerpPoints.length; i++) {
+            for (let j = 0; j < lerpPoints[i].length; j++) {
+                lerpPoints[i][j].update();
+            }
+        }
+
+        for (let i = 0; i < lerpPoints.length - 1; i++) {
+            for (let j = 0; j < lerpPoints[i].length - 1; j++) {
+                lerpConnectors[i][j].draw();
+            }
+        }
+    }
+}
+
+var addPoint = false;
 function animate() {
     requestAnimationFrame(animate);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -182,66 +236,27 @@ function animate() {
         }
     }
     
+    lerp()
+    
     for (let i = 0; i < points.length; i++) {
         points[i].draw();
         points[i].update();
     }
-
+    
     if (points.length >= 2) {
         for (let i = 0; i < points.length - 1; i++) {
             pointConnectors[i].draw();
         }
     }
-    
-    if (draw) {
-        lerpPoints = [];
-        lerpConnectors = [];
-        for (let i = 0; i < pointConnectors.length; i++) {
-            lerpPoints.push(new LerpPoint(points[i], points[i + 1]))
 
-            if (lerpPoints.length >= 2) {
-                lerpConnectors.push(new Connector(lerpPoints[lerpPoints.length - 2], lerpPoints[lerpPoints.length - 1], "blue"))
-            }
-        }
-
-        playLerp = true;
-        draw = false;
-    }
-
-    if (playLerp) {
-        for (let i = 0; i < lerpPoints.length; i++) {
-            lerpPoints[i].lerp();
-        }
-
-        for (let i = 0; i < lerpPoints.length - 1; i++) {
-            lerpConnectors[i].draw();
-        }
-    }
     
 }
 
-// Initialization of objects
+// Initialization of object arrays;
 var points = [];
 var pointConnectors = [];
 var lerpPoints = [];
 var lerpConnectors = [];
-
-// points[0] = new Point(200, 400, 10, "Black");
-// points[1] = new Point(300, 200, 10, "Black");
-// points[2] = new Point(400, 400, 10, "Black");
-
-
-// for (let i = 0; i < numOfPoints; i++) {
-    //     points.push(new Point(Math.random() * innerWidth, Math.random() * innerHeight, 10, "black"));
-    // }
-// for (let i = 0; i < numOfPoints - 1; i++) {
-//     pConnectors.push(new Connector(points[i], points[i + 1], "red"));
-//     lerpPoints.push(new lerpPoint(points[i], points[i + 1]))   
-// }
-
-// for (let i = 0; i < numOfPoints - 1; i++) {
-//     lConnectors.push(new Connector(lerpPoints[i], lerpPoints[i + 1], "blue"));
-// }
 
 window.addEventListener("mousemove", (event) => {
     cursor.x = event.x;
@@ -277,5 +292,3 @@ document.getElementById("draw").addEventListener("click", () => {
 })
 
 animate();
-
-    
