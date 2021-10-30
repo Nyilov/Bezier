@@ -7,4 +7,15 @@ body {
 canvas {
   background-color: white;
   position: absolute;
+  border: 1px solid;
+}
+
+.config {
+  position: absolute;
+  margin-left: 5px;
+  padding-top: 510px;
+}
+
+.configbuttons {
+  margin: 5px;
 }
