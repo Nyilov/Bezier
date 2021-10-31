@@ -110,15 +110,17 @@ class Point {
 
 // Lines that joins two point objects
 class Connector {
-    constructor(p1, p2, colour) {
+    constructor(p1, p2, colour, width) {
         this.p1 = p1;
         this.p2 = p2;
         this.colour = colour;
+        this.width = width;
     }
     draw() {
         ctx.beginPath();
         ctx.moveTo(this.p1.x, this.p1.y);
         ctx.lineTo(this.p2.x, this.p2.y);
+        ctx.lineWidth = this.width;
         ctx.strokeStyle = this.colour;
         ctx.stroke()
     }
@@ -142,7 +144,7 @@ class LerpPoint {
         ctx.fill();
     }
     
-    update(draw = true, slowed = false) {
+    update() {
         let a = this.p1.x;
         let b = this.p2.x;
         this.x = a + this.t * (b - a);
@@ -156,10 +158,8 @@ class LerpPoint {
         } else {
             playLerp = false;
         }
+        this.draw();
         
-        if (draw) {
-            this.draw();
-        }
     }
 
     // static displayBezier() {
@@ -174,11 +174,11 @@ class LerpPoint {
 }
 
 // This took an unfortunate amount of time to code... my eyes hurt
-var draw = false;
+var interpolate = false;
 var playLerp = false;
 var foo = false;
 function lerp() {
-    if (draw) {
+    if (interpolate) {
         lerpConnectors = [];
         lerpPoints = [];
         // The amount of distinct levels of which each subset of lerp points are drawn
@@ -220,10 +220,8 @@ function lerp() {
             lerpPerLevel--;
         }
         playLerp = true;
-        draw = false;
+        interpolate = false;
     }
-    
-    
     
     if (playLerp) {
         for (let i = 0; i < lerpPoints.length; i++) {
@@ -240,13 +238,42 @@ function lerp() {
     }
 }
 
+var drawBezier = false;
+function bezier(colour) {
+    if (drawBezier) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+
+        if (points.length == 4) {
+            ctx.bezierCurveTo(
+                points[1].x, points[1].y,
+                points[2].x, points[2].y,
+                points[3].x, points[3].y
+            )
+        } else if (points.length == 3) {
+            ctx.quadraticCurveTo(
+                points[1].x, points[1].y,
+                points[2].x, points[2].y
+            )
+        } else {
+            ctx.lineTo(points[1].x, points[1].y);
+        }
+
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = colour;
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
 var addPoint = false;
 function animate() {
     requestAnimationFrame(animate);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.beginPath();
 
-    if (addPoint) {
+    if (addPoint && points.length < 4) {
         points.push(
             new Point(Math.random() * width, 
             Math.random() * height, 10, "black"));
@@ -257,14 +284,15 @@ function animate() {
                 points[points.length - 2], points[points.length - 1], "red"));           
         }
     }
-    
-    lerp()
-    
+
     if (points.length >= 2) {
         for (let i = 0; i < points.length - 1; i++) {
             pointConnectors[i].draw();
         }
     }
+    
+    bezier("orange");
+    lerp();
     
     for (let i = 0; i < points.length; i++) {
         points[i].draw();
@@ -277,9 +305,6 @@ var points = [];
 var pointConnectors = [];
 var lerpPoints = [];
 var lerpConnectors = [];
-var bezierCoords = [[],[]];
-var bezierPoints = [];
-var bezier = [];
 
 window.addEventListener("mousemove", (event) => {
     cursor.x = event.x;
@@ -308,10 +333,21 @@ window.addEventListener("mouseup", (event) => {
 
 document.getElementById("addpoint").addEventListener("click", () => {
     addPoint = true;
+    if (points.length == 3) {
+        document.getElementById("addpoint").disabled = true;
+    }
 })
 
-document.getElementById("draw").addEventListener("click", () => {
-    draw = true
+document.getElementById("lerp").addEventListener("click", () => {
+    interpolate = true
+})
+
+document.getElementById("showbezier").addEventListener("click", () => {
+    if (!drawBezier) {
+        drawBezier = true;
+    } else {
+        drawBezier = false;
+    }
 })
 
 animate();
