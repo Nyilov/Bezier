@@ -16,13 +16,13 @@ ctx.scale(scale, scale);
 var cursor = {
     x: undefined,
     y: undefined,
+    clickLeft: undefined,
+    clickRight: undefined,
     heldLeft: undefined,
     heldRight: undefined,
     heldX: undefined,
     heldY: undefined
 }
-
-
 
 // Just a regular old circle
 class Point {
@@ -33,11 +33,15 @@ class Point {
         this.colour = colour;
         this.style = style;
         this.maxRadius = radius + 5;
-        this.ogRadius = radius;
         this.dragging = false;
         this.offsetCreated = false;
         this.offsetX;
         this.offsetY;
+        this.selected;
+
+        this.ogRadius = radius;
+        this.ogColour = colour;
+        this.ogStyle = style;
     };
     
     draw() {
@@ -57,10 +61,26 @@ class Point {
         }
     }
 
+    select() {
+        let cursorDistance = Math.sqrt(Math.pow(cursor.heldX - this.x, 2) + Math.pow(cursor.heldY - this.y, 2));
+        if (cursor.clickLeft && cursorDistance < this.radius) {
+            if (!this.selected) {
+                this.colour = "violet";
+                this.style = "fill";
+                this.selected = true;
+                document.getElementById("removepoint").disabled = false;
+            } else {
+                this.colour = this.ogColour;
+                this.style = this.ogStyle;
+                this.selected = false;
+            }
+        }
+    }
+
     // Tiny animation when cursor hovers over points
     hover() {
         let isCursorOnPoint = cursor.x - this.x < (this.radius + 5) && cursor.x - this.x > -(this.radius + 5)
-        && cursor.y - this.y < (this.radius + 5) && cursor.y - this.y > -(this.radius + 5);
+                                && cursor.y - this.y < (this.radius + 5) && cursor.y - this.y > -(this.radius + 5);
         
         if (isCursorOnPoint && this.radius < this.maxRadius) {
             this.radius++;
@@ -72,7 +92,7 @@ class Point {
     // Hold and drag system
     drag() {
         let cursorDistance = Math.sqrt(Math.pow(cursor.heldX - this.x, 2) + Math.pow(cursor.heldY - this.y, 2));
-        if (cursor.heldLeft && cursorDistance < this.radius) {
+        if (cursorDistance < this.radius) {
             this.dragging = true;
             if (!this.offsetCreated) {
                 this.offsetX = cursor.x - this.x;
@@ -92,17 +112,14 @@ class Point {
         }
     }
 
-    //TODO: implement this abomination
     remove() { 
-        if (cursor.heldRight && cursorDistance < this.radius) {
-            points.splice(this);
-            numOfPoints--;
-            points.sort();
-        }
+        points.splice(points.findIndex(point => point == this), 1);
+        changeConnector = true;
     }
     
     update() {
         this.hover();
+        this.select();
         this.drag();
         this.draw();
     }
@@ -161,16 +178,6 @@ class LerpPoint {
         this.draw();
         
     }
-
-    // static displayBezier() {
-    //     let finalLerp = lerpPoints.slice(-1);
-    //     console.log(lerpPoints.slice(-1).colour)
-    //     ctx.beginPath();
-    //     ctx.moveTo(finalLerp.x, finalLerp.y);
-    //     ctx.lineTo(finalLerp.x, finalLerp.y);
-    //     ctx.strokeStyle = "orange";
-    //     ctx.stroke();
-    // }
 }
 
 // This took an unfortunate amount of time to code... my eyes hurt
@@ -267,6 +274,7 @@ function bezier(colour) {
     }
 }
 
+var changeConnector = false;
 var addPoint = false;
 function animate() {
     requestAnimationFrame(animate);
@@ -277,17 +285,30 @@ function animate() {
         points.push(
             new Point(Math.random() * width, 
             Math.random() * height, 10, "black"));
-        addPoint = false;
-
+            addPoint = false;
+        
         if (points.length >= 2) {
             pointConnectors.push(new Connector(
                 points[points.length - 2], points[points.length - 1], "red"));           
         }
     }
+            
+    if (changeConnector) {
+        pointConnectors = [];
 
+        for (let i = 0; i < points.length - 1; i++) {
+            if (points.length >= 2) {
+                pointConnectors.push(new Connector(
+                    points[i], points[i + 1], "red"));           
+            }
+        }
+
+        changeConnector = false;
+    }
+        
     if (points.length >= 2) {
         for (let i = 0; i < points.length - 1; i++) {
-            pointConnectors[i].draw();
+        pointConnectors[i].draw();
         }
     }
     
@@ -298,6 +319,14 @@ function animate() {
         points[i].draw();
         points[i].update();
     }
+
+    if (points.length >= 4) {
+        document.getElementById("addpoint").disabled = true;
+    } else {
+        document.getElementById("addpoint").disabled = false;
+    }
+
+    cursor.clickLeft = false;
 }
 
 // Initialization of objects;
@@ -323,18 +352,39 @@ window.addEventListener("mousedown", (event) => {
     }
 })
 
-window.addEventListener("mouseup", (event) => {
+window.addEventListener("click", (event) => {
+    cursor.clickLeft = true;
+})
+
+window.addEventListener("mouseup", () => {
     if (cursor.heldLeft) {
         cursor.heldLeft = false;
-    } else if ( cursor.heldRight) {
+    } else if (cursor.heldRight) {
         cursor.heldRight = false;
     }
 })
 
 document.getElementById("addpoint").addEventListener("click", () => {
     addPoint = true;
-    if (points.length == 3) {
-        document.getElementById("addpoint").disabled = true;
+})
+
+
+document.getElementById("removepoint").disabled = true;
+document.getElementById("removepoint").addEventListener("click", () => {
+    playLerp = false;
+    let numOfSelected = 0;
+    for (let i = 0; i < points.length; i++) {
+        if (points[i].selected) {
+            numOfSelected++;
+        }
+    }
+
+    for (let i = 0; i < numOfSelected; i++) {
+        for (let j = 0; j < points.length; j++) {
+            if (points[j].selected) {
+                points[j].remove();
+            } 
+        }
     }
 })
 
