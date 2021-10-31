@@ -62,7 +62,7 @@ class Point {
         let isCursorOnPoint = cursor.x - this.x < (this.radius + 5) && cursor.x - this.x > -(this.radius + 5)
         && cursor.y - this.y < (this.radius + 5) && cursor.y - this.y > -(this.radius + 5);
         
-        if (isCursorOnPoint == true && this.radius < this.maxRadius) {
+        if (isCursorOnPoint && this.radius < this.maxRadius) {
             this.radius++;
         } else if (isCursorOnPoint == false && this.radius > this.ogRadius) {
             this.radius--;
@@ -126,9 +126,10 @@ class Connector {
 }
 
 class LerpPoint {
-    constructor(p1, p2) {
+    constructor(p1, p2, colour = "brown") {
         this.p1 = p1;
         this.p2 = p2;
+        this.colour = colour;
         this.t = 0;
         this.x = undefined;
         this.y = undefined;
@@ -137,11 +138,11 @@ class LerpPoint {
     draw() {
         ctx.beginPath();
         ctx.arc(this.x, this.y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = "brown";
+        ctx.fillStyle = this.colour;
         ctx.fill();
     }
     
-    update() {
+    update(draw = true, slowed = false) {
         let a = this.p1.x;
         let b = this.p2.x;
         this.x = a + this.t * (b - a);
@@ -155,13 +156,27 @@ class LerpPoint {
         } else {
             playLerp = false;
         }
-        this.draw();
+        
+        if (draw) {
+            this.draw();
+        }
     }
+
+    // static displayBezier() {
+    //     let finalLerp = lerpPoints.slice(-1);
+    //     console.log(lerpPoints.slice(-1).colour)
+    //     ctx.beginPath();
+    //     ctx.moveTo(finalLerp.x, finalLerp.y);
+    //     ctx.lineTo(finalLerp.x, finalLerp.y);
+    //     ctx.strokeStyle = "orange";
+    //     ctx.stroke();
+    // }
 }
 
 // This took an unfortunate amount of time to code... my eyes hurt
 var draw = false;
 var playLerp = false;
+var foo = false;
 function lerp() {
     if (draw) {
         lerpConnectors = [];
@@ -182,9 +197,13 @@ function lerp() {
                 if (lerpPerLevel == level) {
                     lerpPoints[i].push(
                         new LerpPoint(points[j], points[j + 1]));
+                } else if (lerpPerLevel == 1) {
+                    lerpPoints[i].push(
+                        new LerpPoint(lerpPoints[i - 1][j], lerpPoints[i - 1][j + 1], "green")); 
+                        foo = true;    
                 } else {
                     lerpPoints[i].push(
-                        new LerpPoint(lerpPoints[i - 1][j], lerpPoints[i - 1][j + 1]));
+                        new LerpPoint(lerpPoints[i - 1][j], lerpPoints[i - 1][j + 1]));                    
                 }
 
                 if (lerpPoints[i].length >= 2) {
@@ -192,6 +211,7 @@ function lerp() {
                         new Connector(lerpPoints[i][j - 1], 
                             lerpPoints[i][j], "blue"))
                 }
+
             }
             // The total amount of lerp points can be calculated as a triangular sum,
             // which is basically factorial with addition instead of multiplication
@@ -202,14 +222,16 @@ function lerp() {
         playLerp = true;
         draw = false;
     }
-
+    
+    
+    
     if (playLerp) {
         for (let i = 0; i < lerpPoints.length; i++) {
             for (let j = 0; j < lerpPoints[i].length; j++) {
                 lerpPoints[i][j].update();
             }
         }
-
+        
         for (let i = 0; i < lerpPoints.length - 1; i++) {
             for (let j = 0; j < lerpPoints[i].length - 1; j++) {
                 lerpConnectors[i][j].draw();
@@ -238,25 +260,26 @@ function animate() {
     
     lerp()
     
-    for (let i = 0; i < points.length; i++) {
-        points[i].draw();
-        points[i].update();
-    }
-    
     if (points.length >= 2) {
         for (let i = 0; i < points.length - 1; i++) {
             pointConnectors[i].draw();
         }
     }
-
     
+    for (let i = 0; i < points.length; i++) {
+        points[i].draw();
+        points[i].update();
+    }
 }
 
-// Initialization of object arrays;
+// Initialization of objects;
 var points = [];
 var pointConnectors = [];
 var lerpPoints = [];
 var lerpConnectors = [];
+var bezierCoords = [[],[]];
+var bezierPoints = [];
+var bezier = [];
 
 window.addEventListener("mousemove", (event) => {
     cursor.x = event.x;
@@ -276,9 +299,9 @@ window.addEventListener("mousedown", (event) => {
 })
 
 window.addEventListener("mouseup", (event) => {
-    if (cursor.heldLeft == true) {
+    if (cursor.heldLeft) {
         cursor.heldLeft = false;
-    } else if ( cursor.heldRight == true) {
+    } else if ( cursor.heldRight) {
         cursor.heldRight = false;
     }
 })
