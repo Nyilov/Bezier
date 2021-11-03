@@ -73,6 +73,8 @@ class Point {
                 this.style = this.ogStyle;
                 this.selected = false;
             }
+
+            updateButtons();
         }
     }
 
@@ -115,7 +117,8 @@ class Point {
             points.findIndex((point) => point == this),
             1
         );
-        toChangeConnector = true;
+        renewConnector();
+        updateButtons();
     }
 
     update() {
@@ -172,70 +175,68 @@ class LerpPoint {
 
         if (this.t < 1) {
             this.t += 0.01;
-        } else {
-            playLerp = false;
         }
         this.draw();
     }
 }
 
+var stop = undefined;
+function playLerp() {
+    if (stop) return;
+    requestAnimationFrame(playLerp);
+    for (let i = 0; i < lerpPoints.length; i++) {
+        for (let j = 0; j < lerpPoints[i].length; j++) {
+            lerpPoints[i][j].update();
+        }
+    }
+
+    for (let i = 0; i < lerpPoints.length - 1; i++) {
+        for (let j = 0; j < lerpPoints[i].length - 1; j++) {
+            lerpConnectors[i][j].draw();
+        }
+    }
+    if (Math.trunc(lerpPoints[0][0].t) == 1) stop = true;
+}
+
 // This took an unfortunate amount of time to code... my eyes hurt
 var interpolate = false;
-var playLerp = false;
 var foo = false;
 function lerp() {
-    if (interpolate) {
-        lerpConnectors = [];
-        lerpPoints = [];
-        // The amount of distinct levels of which each subset of lerp points are drawn
-        let level = points.length - 1;
-        // The amount of lerp points per level
-        let lerpPerLevel = points.length - 1;
+    lerpConnectors = [];
+    lerpPoints = [];
+    // The amount of distinct levels of which each subset of lerp points are drawn
+    let level = points.length - 1;
+    // The amount of lerp points per level
+    let lerpPerLevel = points.length - 1;
+    //Initialization of 2D array
+    for (let i = 0; i < level; i++) {
+        lerpPoints.push([]);
+        lerpConnectors.push([]);
+    }
 
-        //Initialization of 2D array
-        for (let i = 0; i < level; i++) {
-            lerpPoints.push([]);
-            lerpConnectors.push([]);
-        }
-
-        for (let i = 0; i < level; i++) {
-            for (let j = 0; j < lerpPerLevel; j++) {
-                if (lerpPerLevel == level) {
-                    lerpPoints[i].push(new LerpPoint(points[j], points[j + 1]));
-                } else if (lerpPerLevel == 1) {
-                    lerpPoints[i].push(new LerpPoint(lerpPoints[i - 1][j], lerpPoints[i - 1][j + 1], "orange"));
-                    foo = true;
-                } else {
-                    lerpPoints[i].push(new LerpPoint(lerpPoints[i - 1][j], lerpPoints[i - 1][j + 1]));
-                }
-
-                if (lerpPoints[i].length >= 2) {
-                    lerpConnectors[i].push(new Connector(lerpPoints[i][j - 1], lerpPoints[i][j], "blue"));
-                }
+    for (let i = 0; i < level; i++) {
+        for (let j = 0; j < lerpPerLevel; j++) {
+            if (lerpPerLevel == level) {
+                lerpPoints[i].push(new LerpPoint(points[j], points[j + 1]));
+            } else if (lerpPerLevel == 1) {
+                lerpPoints[i].push(new LerpPoint(lerpPoints[i - 1][j], lerpPoints[i - 1][j + 1], "orange"));
+                foo = true;
+            } else {
+                lerpPoints[i].push(new LerpPoint(lerpPoints[i - 1][j], lerpPoints[i - 1][j + 1]));
             }
-            /* The total amount of lerp points can be calculated as a triangular sum,
+
+            if (lerpPoints[i].length >= 2) {
+                lerpConnectors[i].push(new Connector(lerpPoints[i][j - 1], lerpPoints[i][j], "blue"));
+            }
+        }
+        /* The total amount of lerp points can be calculated as a triangular sum,
       This is why each level is one less from the previous one: eg. 4, 3, 2, 1
       which is basically factorial with addition instead of multiplication
       math voodoo magic? */
-            lerpPerLevel--;
-        }
-        playLerp = true;
-        interpolate = false;
+        lerpPerLevel--;
     }
 
-    if (playLerp) {
-        for (let i = 0; i < lerpPoints.length; i++) {
-            for (let j = 0; j < lerpPoints[i].length; j++) {
-                lerpPoints[i][j].update();
-            }
-        }
-
-        for (let i = 0; i < lerpPoints.length - 1; i++) {
-            for (let j = 0; j < lerpPoints[i].length - 1; j++) {
-                lerpConnectors[i][j].draw();
-            }
-        }
-    }
+    playLerp();
 }
 
 var drawBezier = false;
@@ -261,9 +262,8 @@ function bezier(colour) {
 }
 
 function addPoint() {
-    if (toAddPoint && points.length < 4) {
+    if (points.length < 4) {
         points.push(new Point(Math.random() * width, Math.random() * height, 10, "white"));
-        toAddPoint = false;
 
         if (points.length >= 2) {
             pointConnectors.push(new Connector(points[points.length - 2], points[points.length - 1], "red"));
@@ -272,14 +272,11 @@ function addPoint() {
 }
 
 function renewConnector() {
-    if (toChangeConnector) {
-        pointConnectors = [];
-        for (let i = 0; i < points.length - 1; i++) {
-            if (points.length >= 2) {
-                pointConnectors.push(new Connector(points[i], points[i + 1], "red"));
-            }
+    pointConnectors = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        if (points.length >= 2) {
+            pointConnectors.push(new Connector(points[i], points[i + 1], "red"));
         }
-        toChangeConnector = false;
     }
 }
 
@@ -313,32 +310,48 @@ function updateButtons() {
     }
 }
 
-var toChangeConnector = false;
-var toAddPoint = false;
-function animate() {
-    requestAnimationFrame(animate);
+function animatePoints() {
+    requestAnimationFrame(animatePoints);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.beginPath();
-
-    addPoint();
-    renewConnector();
 
     pointConnectors.forEach((connector) => {
         connector.draw();
     });
-
-    bezier("orange");
-    lerp();
 
     points.forEach((point) => {
         point.draw();
         point.update();
     });
 
-    updateButtons();
-
     cursor.clickLeft = false;
 }
+
+// var toChangeConnector = false;
+// var toAddPoint = false;
+// function animate() {
+//     requestAnimationFrame(animate);
+//     ctx.clearRect(0, 0, canvas.width, canvas.height);
+//     ctx.beginPath();
+
+//     addPoint();
+//     renewConnector();
+
+//     pointConnectors.forEach((connector) => {
+//         connector.draw();
+//     });
+
+//     bezier("orange");
+//     lerp();
+
+//     points.forEach((point) => {
+//         point.draw();
+//         point.update();
+//     });
+
+//     updateButtons();
+
+//     cursor.clickLeft = false;
+// }
 
 // Initialization of object arrays;
 var points = [];
@@ -372,12 +385,17 @@ window.addEventListener("mouseup", () => {
     if (cursor.heldRight) cursor.heldRight = false;
 });
 
+document.querySelectorAll(".configbuttons").forEach((button) => {
+    button.addEventListener("click", () => {
+        updateButtons();
+    });
+});
+
 document.getElementById("addpoint").addEventListener("click", () => {
-    toAddPoint = true;
+    addPoint();
 });
 
 document.getElementById("removepoint").addEventListener("click", () => {
-    playLerp = false;
     pointsSelected = findNumOfSelected(points);
     for (let i = 0; i < pointsSelected; i++) {
         for (let j = 0; j < points.length; j++) {
@@ -385,17 +403,17 @@ document.getElementById("removepoint").addEventListener("click", () => {
                 points[j].remove();
             }
         }
-        console.log(points);
     }
 });
 
 document.getElementById("lerp").addEventListener("click", () => {
-    if (interpolate) interpolate = false;
-    if (!interpolate) interpolate = true;
+    stop = false;
+    lerp();
 });
 
 document.getElementById("showbezier").addEventListener("click", () => {
     drawBezier ? (drawBezier = false) : (drawBezier = true);
 });
 
-animate();
+updateButtons();
+animatePoints();
