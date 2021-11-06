@@ -84,9 +84,9 @@ class Point {
 
     // Tiny animation when cursor hovers over points
     hover() {
-        let isCursorOnPoint = cursor.x - this.x < this.radius + 2 && cursor.x - this.x > -(this.radius + 2) && cursor.y - this.y < this.radius + 2 && cursor.y - this.y > -(this.radius + 2);
+        let isCursorOnPoint = cursor.x - this.x < this.radius + 2 && cursor.x - this.x > -(this.radius + 5) && cursor.y - this.y < this.radius + 5 && cursor.y - this.y > -(this.radius + 5);
 
-        if (isCursorOnPoint && this.radius < this.maxRadius) {
+        if ((isCursorOnPoint && this.radius < this.maxRadius) || (this.dragging == true && this.radius < this.maxRadius)) {
             this.radius++;
         } else if (isCursorOnPoint == false && this.radius > this.ogRadius) {
             this.radius--;
@@ -96,6 +96,19 @@ class Point {
     // Hold and drag system
     drag() {
         let cursorDistance = Math.sqrt(Math.pow(cursor.heldX - this.x, 2) + Math.pow(cursor.heldY - this.y, 2));
+
+        if (this.x >= width) {
+            this.x = width - this.radius;
+        } else if (this.x <= this.radius) {
+            this.x = this.radius;
+        }
+
+        if (this.y >= height) {
+            this.y = height - this.radius;
+        } else if (this.y <= this.radius) {
+            this.y = this.radius;
+        }
+
         if (cursorDistance < this.radius) {
             this.dragging = true;
             if (!this.offsetCreated) {
@@ -106,7 +119,7 @@ class Point {
         }
 
         if (this.dragging) {
-            if (cursor.heldLeft && cursor.x < canvas.width && cursor.y < canvas.height && cursor.y > 0) {
+            if (cursor.heldLeft) {
                 this.x = cursor.x - this.offsetX;
                 this.y = cursor.y - this.offsetY;
             } else {
@@ -121,7 +134,7 @@ class Point {
             points.findIndex((point) => point == this),
             1
         );
-        renewConnector();
+        Connector.renew();
         updateButtons();
         displayLerp = false;
     }
@@ -131,6 +144,17 @@ class Point {
         this.select();
         this.drag();
         this.draw();
+    }
+
+    static add() {
+        displayLerp = false;
+        if (points.length < 4) {
+            points.push(new Point(Math.random() * width, Math.random() * height, 10, "white"));
+
+            if (points.length >= 2) {
+                pointConnectors.push(new Connector(points[points.length - 2], points[points.length - 1], "red"));
+            }
+        }
     }
 }
 
@@ -152,6 +176,15 @@ class Connector {
         ctx.strokeStyle = this.colour;
         ctx.stroke();
         ctx.restore();
+    }
+
+    static renew() {
+        pointConnectors = [];
+        for (let i = 0; i < points.length - 1; i++) {
+            if (points.length >= 2) {
+                pointConnectors.push(new Connector(points[i], points[i + 1], "red"));
+            }
+        }
     }
 }
 
@@ -190,25 +223,6 @@ class LerpPoint {
     }
 }
 
-// function playLerp() {
-//     if (!doLerp) return;
-//     requestAnimationFrame(playLerp);
-//     for (let i = 0; i < lerpPoints.length; i++) {
-//         for (let j = 0; j < lerpPoints[i].length; j++) {
-//             lerpPoints[i][j].update();
-//         }
-//     }
-
-//     for (let i = 0; i < lerpPoints.length - 1; i++) {
-//         for (let j = 0; j < lerpPoints[i].length - 1; j++) {
-//             lerpConnectors[i][j].draw();
-//         }
-//     }
-//     if (Math.trunc(lerpPoints[0][0].t) == 1) {
-//         lerp();
-//     }
-// }
-
 var displayLerp = false;
 function playLerp() {
     if (!displayLerp) return;
@@ -246,10 +260,9 @@ function lerp() {
                     lerpConnectors[i].push(new Connector(lerpPoints[i][j - 1], lerpPoints[i][j], "blue"));
                 }
             }
-            /* The total amount of lerp points can be calculated as a triangular sum,
-        This is why each level is one less from the previous one: eg. 4, 3, 2, 1
-        which is basically factorial with addition instead of multiplication
-        math voodoo magic? */
+            // The total amount of lerp points can be calculated as a triangular sum,
+            // This is why each level is one less from the previous one: eg. 4, 3, 2, 1
+            // which is basically factorial with addition instead of multiplication
 
             lerpPerLevel--;
         }
@@ -301,26 +314,6 @@ function bezier() {
     ctx.restore();
 }
 
-function addPoint() {
-    displayLerp = false;
-    if (points.length < 4) {
-        points.push(new Point(Math.random() * width, Math.random() * height, 10, "white"));
-
-        if (points.length >= 2) {
-            pointConnectors.push(new Connector(points[points.length - 2], points[points.length - 1], "red"));
-        }
-    }
-}
-
-function renewConnector() {
-    pointConnectors = [];
-    for (let i = 0; i < points.length - 1; i++) {
-        if (points.length >= 2) {
-            pointConnectors.push(new Connector(points[i], points[i + 1], "red"));
-        }
-    }
-}
-
 function findNumOfSelected(array) {
     let numOfSelected = 0;
     for (let i = 0; i < array.length; i++) {
@@ -367,33 +360,6 @@ function animatePoints() {
     cursor.clickLeft = false;
 }
 
-// var toChangeConnector = false;
-// var toAddPoint = false;
-// function animate() {
-//     requestAnimationFrame(animate);
-//     ctx.clearRect(0, 0, canvas.width, canvas.height);
-//     ctx.beginPath();
-
-//     addPoint();
-//     renewConnector();
-
-//     pointConnectors.forEach((connector) => {
-//         connector.draw();
-//     });
-
-//     bezier("orange");
-//     lerp();
-
-//     points.forEach((point) => {
-//         point.draw();
-//         point.update();
-//     });
-
-//     updateButtons();
-
-//     cursor.clickLeft = false;
-// }
-
 // Initialization of object arrays;
 var points = [];
 var pointConnectors = [];
@@ -433,7 +399,8 @@ document.querySelectorAll(".configbuttons").forEach((button) => {
 });
 
 document.getElementById("addpoint").addEventListener("click", () => {
-    addPoint();
+    Point.add();
+    updateButtons();
 });
 
 document.getElementById("removepoint").addEventListener("click", () => {

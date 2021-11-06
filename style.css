@@ -1,12 +1,12 @@
 body {
-    background-color: #152238;
+    background-color: white;
     margin: 0;
     padding: 0;
     overflow: hidden;
 }
 
 canvas {
-    background-color: gray;
+    background-color: white;
     position: absolute;
     border: 1px solid;
 }
